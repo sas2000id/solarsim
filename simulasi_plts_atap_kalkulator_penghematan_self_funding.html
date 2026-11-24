@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi PLTS Atap — Kalkulator Penghematan & Self-Funding PLN</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            solar: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+            },
+            save: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- SheetJS (xlsx) CDN untuk Ekspor Excel Asli (.xlsx) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Minimal Styles for Range Sliders & Scrollbar -->
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Custom Range Slider */
+    input[type='range'] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 9999px;
+      background: #e2e8f0;
+      outline: none;
+    }
+    input[type='range']::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+      background: #f59e0b;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+    input[type='range']::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+      background: #d97706;
+    }
+    input[type='range']::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+      background: #f59e0b;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+      cursor: pointer;
+    }
+
+    /* Custom Scrollbar for Table */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+  <!-- Header / Navbar -->
+  <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+          <i data-lucide="sun" class="w-6 h-6 text-slate-900"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight leading-tight flex items-center gap-2">
+            Simulasi PLTS Atap
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Self-Funding Calculator
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">
+            Analisis penutupan biaya investasi & cicilan panel surya dari penghematan tagihan PLN
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          id="btnExportExcelHeader"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white shadow-md shadow-emerald-600/25 border border-emerald-500/40 transition cursor-pointer"
+          title="Unduh hasil simulasi & proyeksi 25 tahun ke file Excel (.xlsx)"
+        >
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          <span>Save to Excel (.xlsx)</span>
+        </button>
+
+        <button
+          id="btnReset"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer"
+          title="Kembalikan ke pengaturan awal"
+        >
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>Reset</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- ==================== PANEL KIRI: INPUT INTERAKTIF ==================== -->
+      <aside class="lg:col-span-4 space-y-5">
+        
+        <!-- 1. Profil Listrik PLN -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5">
+          <div class="flex items-center gap-2.5 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </div>
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">1. Profil Listrik PLN</h2>
+          </div>
+
+          <!-- Golongan Tarif PLN -->
+          <div class="mb-4">
+            <label for="tariffGroup" class="block text-xs font-semibold text-slate-600 mb-1.5">
+              Golongan Tarif PLN
+            </label>
+            <select
+              id="tariffGroup"
+              class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition"
+            >
+              <option value="1444.70_r1_1300">R-1 (1.300 VA) — Rp 1.444,70/kWh</option>
+              <option value="1444.70_r1_2200">R-1 (2.200 VA) — Rp 1.444,70/kWh</option>
+              <option value="1699.53" selected>R-2 (3.500 - 5.500 VA) — Rp 1.699,53/kWh</option>
+              <option value="1699.53_r3">R-3 (&gt; 6.600 VA) — Rp 1.699,53/kWh</option>
+              <option value="1444.70_b2">Bisnis B-2 (6.600 VA - 200 kVA) — Rp 1.444,70/kWh</option>
+              <option value="1114.74_b3">Bisnis B-3 (&gt; 200 kVA) — Rp 1.114,74/kWh</option>
+              <option value="1444.70_i2">Industri I-2 (14 - 200 kVA) — Rp 1.444,70/kWh</option>
+              <option value="1114.74_i3">Industri I-3 (&gt; 200 kVA) — Rp 1.114,74/kWh</option>
+              <option value="custom">Custom (Atur Sendiri Rp/kWh)</option>
+            </select>
+          </div>
+
+          <!-- Input Custom Tarif (tampil hanya saat Custom dipilih) -->
+          <div id="customTariffWrap" class="mb-4 hidden">
+            <label for="customTariffInput" class="block text-xs font-semibold text-slate-600 mb-1.5">
+              Tarif Listrik Custom (Rp / kWh)
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">Rp</span>
+              <input
+                id="customTariffInput"
+                type="number"
+                min="500"
+                max="10000"
+                step="10"
+                value="1699.53"
+                class="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-14 py-2 text-sm font-semibold text-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none"
+              />
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">/kWh</span>
+            </div>
+          </div>
+
+          <!-- Tagihan Listrik Bulanan -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="monthlyBillRange" class="text-xs font-semibold text-slate-600">
+                Tagihan PLN Bulanan Saat Ini
+              </label>
+              <span id="estKwhBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                ~1.765 kWh/bln
+              </span>
+            </div>
+
+            <div class="relative mb-2.5">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+              <input
+                id="monthlyBillInput"
+                type="number"
+                min="500000"
+                max="50000000"
+                step="100000"
+                value="3000000"
+                class="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-base font-bold text-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none"
+              />
+            </div>
+
+            <input
+              id="monthlyBillRange"
+              type="range"
+              min="500000"
+              max="50000000"
+              step="100000"
+              value="3000000"
+              class="w-full"
+            />
+            <div class="flex justify-between text-[11px] text-slate-400 mt-1">
+              <span>Rp 500 rb</span>
+              <span>Rp 25 jt</span>
+              <span>Rp 50 jt</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Konfigurasi Sistem PLTS -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5">
+          <div class="flex items-center gap-2.5 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+            </div>
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">2. Konfigurasi Sistem PLTS</h2>
+          </div>
+
+          <!-- Tipe Sistem -->
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-600 mb-2">Tipe Sistem PLTS</label>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                id="btnTypeOnGrid"
+                class="system-type-btn flex flex-col items-start p-3 rounded-xl border-2 border-amber-500 bg-amber-50/70 text-left transition cursor-pointer"
+              >
+                <div class="flex items-center gap-1.5 font-bold text-sm text-slate-900">
+                  <i data-lucide="sun" class="w-4 h-4 text-amber-600"></i>
+                  On-Grid
+                </div>
+                <span class="text-[11px] text-slate-500 mt-0.5">Tanpa baterai · Hemat maksimal</span>
+              </button>
+
+              <button
+                type="button"
+                id="btnTypeHybrid"
+                class="system-type-btn flex flex-col items-start p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-left transition cursor-pointer"
+              >
+                <div class="flex items-center gap-1.5 font-bold text-sm text-slate-900">
+                  <i data-lucide="battery-charging" class="w-4 h-4 text-emerald-600"></i>
+                  Hybrid
+                </div>
+                <span class="text-[11px] text-slate-500 mt-0.5">Dengan baterai · Backup listrik</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Kapasitas PLTS + Auto-Hitung -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <label for="capacityRange" class="text-xs font-semibold text-slate-600">
+                Kapasitas PLTS
+              </label>
+              <button
+                type="button"
+                id="btnAutoOptimal"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition cursor-pointer"
+              >
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                Auto-Hitung Optimal
+              </button>
+            </div>
+
+            <div class="flex items-baseline justify-between mb-2">
+              <span id="capacityDisplay" class="text-2xl font-extrabold text-slate-900">10.0 <span class="text-sm font-semibold text-slate-500">kWp</span></span>
+              <span id="estMonthlyProdBadge" class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                ~912 kWh terpakai/bln
+              </span>
+            </div>
+
+            <input
+              id="capacityRange"
+              type="range"
+              min="1"
+              max="50"
+              step="0.5"
+              value="10"
+              class="w-full"
+            />
+            <div class="flex justify-between text-[11px] text-slate-400 mt-1">
+              <span>1 kWp</span>
+              <span>25 kWp</span>
+              <span>50 kWp</span>
+            </div>
+
+            <!-- Info jika kapasitas melebihi pemakaian -->
+            <div id="overCapacityNotice" class="hidden mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
+              <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+              <span>Produksi PLTS melebihi total konsumsi PLN Anda. Klik <strong>Auto-Hitung Optimal</strong> agar investasi lebih efisien (tanpa ekspor kWh ke PLN).</span>
+            </div>
+          </div>
+
+          <!-- Harga Investasi per kWp -->
+          <div>
+            <label for="pricePerKwpInput" class="block text-xs font-semibold text-slate-600 mb-1.5">
+              Harga Investasi per kWp (Terpasang)
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+              <input
+                id="pricePerKwpInput"
+                type="number"
+                min="5000000"
+                max="60000000"
+                step="500000"
+                value="14000000"
+                class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-9 pr-14 py-2 text-sm font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none"
+              />
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">/kWp</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Skema Pembiayaan -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5">
+          <div class="flex items-center gap-2.5 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i data-lucide="wallet" class="w-4 h-4"></i>
+            </div>
+            <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">3. Skema Pembiayaan</h2>
+          </div>
+
+          <!-- Toggle Cash vs Cicilan -->
+          <div class="grid grid-cols-2 p-1 rounded-xl bg-slate-100 mb-4">
+            <button
+              type="button"
+              id="btnModeCash"
+              class="py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600"
+            >
+              Beli Tunai (Cash)
+            </button>
+            <button
+              type="button"
+              id="btnModeLoan"
+              class="py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer bg-slate-900 text-white shadow-sm"
+            >
+              Skema Cicilan
+            </button>
+          </div>
+
+          <!-- Opsi Cicilan -->
+          <div id="loanOptionsWrap" class="space-y-4">
+            <!-- Uang Muka (DP) -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold text-slate-600">Uang Muka (DP)</span>
+                <span class="font-bold text-slate-900">
+                  <span id="dpPercentLabel">10%</span>
+                  <span id="dpAmountLabel" class="text-slate-500 font-medium">(Rp 14.000.000)</span>
+                </span>
+              </div>
+              <input id="dpRange" type="range" min="0" max="50" step="5" value="10" class="w-full" />
+              <div class="flex justify-between text-[11px] text-slate-400 mt-0.5">
+                <span>0% (Tanpa DP)</span>
+                <span>25%</span>
+                <span>50%</span>
+              </div>
+            </div>
+
+            <!-- Tenor Cicilan -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold text-slate-600">Tenor Cicilan</span>
+                <span id="tenorLabel" class="font-bold text-slate-900">5 Tahun (60 bln)</span>
+              </div>
+              <input id="tenorRange" type="range" min="1" max="10" step="1" value="5" class="w-full" />
+              <div class="flex justify-between text-[11px] text-slate-400 mt-0.5">
+                <span>1 Thn</span>
+                <span>5 Thn</span>
+                <span>10 Thn</span>
+              </div>
+            </div>
+
+            <!-- Bunga per Tahun -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold text-slate-600">Bunga Efektif / Tahun</span>
+                <span id="interestLabel" class="font-bold text-slate-900">7.0% / thn</span>
+              </div>
+              <input id="interestRange" type="range" min="0" max="15" step="0.5" value="7" class="w-full" />
+              <div class="flex justify-between text-[11px] text-slate-400 mt-0.5">
+                <span>0%</span>
+                <span>7.5%</span>
+                <span>15%</span>
+              </div>
+            </div>
+
+            <!-- Ringkasan Pokok Pinjaman & Cicilan -->
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-1.5">
+              <div class="flex justify-between">
+                <span class="text-slate-500">Pokok Pembiayaan</span>
+                <span id="loanPrincipalLabel" class="font-semibold text-slate-800">Rp 0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">Estimasi Cicilan / Bulan</span>
+                <span id="monthlyInstallmentLabel" class="font-bold text-slate-900">Rp 0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info Cash Mode -->
+          <div id="cashInfoWrap" class="hidden p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 leading-relaxed">
+            Pembelian tunai menghasilkan <strong class="text-slate-900">ROI tertinggi</strong> tanpa beban bunga. Penghematan tagihan listrik PLN setiap bulan langsung mengurangi biaya investasi hingga mencapai titik impas (BEP).
+          </div>
+        </section>
+
+        <!-- 4. Parameter Teknis (Accordion) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <button
+            type="button"
+            id="btnToggleTech"
+            class="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition cursor-pointer"
+          >
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">4. Parameter Teknis</h2>
+                <p class="text-[11px] text-slate-500">Matahari, efisiensi, eskalasi tarif & degradasi</p>
+              </div>
+            </div>
+            <i id="techChevron" data-lucide="chevron-down" class="w-5 h-5 text-slate-400 transition-transform duration-200"></i>
+          </button>
+
+          <div id="techAccordionBody" class="hidden px-5 pb-5 pt-1 space-y-4 border-t border-slate-100">
+            <!-- Peak Sun Hours -->
+            <div class="pt-3">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold text-slate-600">Peak Sun Hours (Jam Efektif)</span>
+                <span id="pshLabel" class="font-bold text-slate-900">3.8 jam/hari</span>
+              </div>
+              <input id="pshRange" type="range" min="3.0" max="5.0" step="0.1" value="3.8" class="w-full" />
+            </div>
+
+            <!-- Self-Consumption -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold text-slate-600">Self-Consumption (Pemakaian Langsung)</span>
+                <span id="selfConsLabel" class="font-bold text-slate-900">80%</span>
+              </div>
+              <input id="selfConsRange" type="range" min="40" max="100" step="5" value="80" class="w-full" />
+              <p class="text-[11px] text-slate-400 mt-1">
+                Mengacu aturan PLTS Atap tanpa ekspor kWh ke PLN (On-Grid ~80%, Hybrid ~95%).
+              </p>
+            </div>
+
+            <!-- Kenaikan Tarif PLN -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold text-slate-600">Estimasi Kenaikan Tarif PLN / Thn</span>
+                <span id="escalationLabel" class="font-bold text-slate-900">3.0% / thn</span>
+              </div>
+              <input id="escalationRange" type="range" min="0" max="10" step="0.5" value="3.0" class="w-full" />
+            </div>
+
+            <!-- Degradasi Panel -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold text-slate-600">Degradasi Panel / Thn</span>
+                <span id="degradationLabel" class="font-bold text-slate-900">0.5% / thn</span>
+              </div>
+              <input id="degradationRange" type="range" min="0" max="1.5" step="0.1" value="0.5" class="w-full" />
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- ==================== PANEL KANAN: OUTPUT & VISUALISASI ==================== -->
+      <div class="lg:col-span-8 space-y-6">
+        
+        <!-- 1. Banner Status Coverage / Self-Funding -->
+        <section
+          id="coverageBanner"
+          class="rounded-2xl p-5 sm:p-6 shadow-md border transition-colors duration-300 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-emerald-500/40"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1.5">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/15 backdrop-blur-sm">
+                <i id="bannerIcon" data-lucide="check-circle-2" class="w-4 h-4"></i>
+                <span id="bannerBadgeText">BIAYA TERCOVER 100% — CASHFLOW POSITIF</span>
+              </div>
+              <h2 id="bannerTitle" class="text-xl sm:text-2xl font-extrabold tracking-tight">
+                Penghematan PLN Menutupi Seluruh Cicilan Bulanan!
+              </h2>
+              <p id="bannerSubtitle" class="text-sm text-white/90 leading-relaxed max-w-2xl">
+                Penghematan tagihan listrik Anda lebih besar dari cicilan bulanan, sehingga Anda langsung hemat sejak bulan pertama.
+              </p>
+            </div>
+
+            <div class="bg-slate-900/25 backdrop-blur-sm rounded-xl p-4 min-w-[210px] border border-white/15 shrink-0">
+              <p id="bannerMetricLabel" class="text-[11px] uppercase tracking-wider font-semibold text-white/80">
+                Surplus Bersih / Bulan
+              </p>
+              <p id="bannerMetricValue" class="text-2xl font-extrabold mt-0.5">
+                +Rp 0
+              </p>
+              <p id="bannerMetricSub" class="text-xs text-white/80 mt-1">
+                Rasio Cover: 100%
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. 4 Kartu KPI Utama -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <!-- KPI 1: Total Investasi & Luas Atap -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-500">Total Investasi</span>
+              <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                <i data-lucide="banknote" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div>
+              <p id="kpiInvestment" class="text-lg sm:text-xl font-extrabold text-slate-900">Rp 0</p>
+              <p id="kpiRoofArea" class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                <i data-lucide="home" class="w-3.5 h-3.5 text-amber-500"></i>
+                Est. luas atap: <strong>55 m²</strong>
+              </p>
+            </div>
+          </div>
+
+          <!-- KPI 2: Penghematan PLN / Bulan -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-500">Hemat PLN / Bulan</span>
+              <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="trending-down" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div>
+              <p id="kpiMonthlySavings" class="text-lg sm:text-xl font-extrabold text-emerald-600">Rp 0</p>
+              <p id="kpiSavingsPercent" class="text-xs text-emerald-700 font-semibold mt-1">
+                Turun 0% dari tagihan
+              </p>
+            </div>
+          </div>
+
+          <!-- KPI 3: Titik Impas (BEP) -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-500">Titik Impas (BEP)</span>
+              <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div>
+              <p id="kpiBep" class="text-lg sm:text-xl font-extrabold text-slate-900">0 Thn 0 Bln</p>
+              <p id="kpiBepSub" class="text-xs text-slate-500 mt-1">
+                Biaya tertutup penuh
+              </p>
+            </div>
+          </div>
+
+          <!-- KPI 4: Total Keuntungan Bersih 25 Tahun & ROI -->
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-500">Profit Bersih 25 Thn</span>
+              <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="piggy-bank" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div>
+              <p id="kpiNetProfit" class="text-lg sm:text-xl font-extrabold text-slate-900">Rp 0</p>
+              <p id="kpiRoi" class="text-xs font-bold text-amber-600 mt-1">
+                ROI: 0%
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Grafik Interaktif (Chart.js) -->
+        <section class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+          <!-- Grafik 1: Arus Kas Kumulatif 25 Tahun -->
+          <div class="xl:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 flex flex-col">
+            <div class="flex items-start justify-between gap-2 mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Arus Kas Kumulatif (25 Tahun)</h3>
+                <p class="text-xs text-slate-500">Perpotongan garis Rp 0 menandakan biaya PLTS sudah tertutup penuh (BEP)</p>
+              </div>
+              <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 shrink-0">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Profit
+              </span>
+            </div>
+            <div class="relative h-64 sm:h-72 w-full">
+              <canvas id="cashflowChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Grafik 2: Perbandingan Biaya Bulanan -->
+          <div class="xl:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 flex flex-col">
+            <div class="mb-4">
+              <h3 class="text-sm font-bold text-slate-900">Perbandingan Biaya Bulanan (Tahun 1)</h3>
+              <p class="text-xs text-slate-500">Sebelum vs Sesudah pasang PLTS</p>
+            </div>
+            <div class="relative h-64 sm:h-72 w-full">
+              <canvas id="monthlyCompareChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Dampak Lingkungan Singkat -->
+        <section class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <i data-lucide="leaf" class="w-6 h-6 text-emerald-400"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">Kontribusi Energi Bersih & Lingkungan (25 Tahun)</h3>
+              <p class="text-xs text-slate-400">Estimasi total selama 25 tahun berdasarkan faktor emisi grid PLN (0,85 kg CO₂/kWh)</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4 sm:gap-6 w-full sm:w-auto">
+            <div class="bg-slate-800/80 rounded-xl px-4 py-2.5 border border-slate-700/80 flex-1 sm:flex-none">
+              <p class="text-[11px] text-slate-400">Total Reduksi CO₂ (25 Thn)</p>
+              <p id="envCo2" class="text-base font-extrabold text-emerald-400">0 ton</p>
+            </div>
+            <div class="bg-slate-800/80 rounded-xl px-4 py-2.5 border border-slate-700/80 flex-1 sm:flex-none">
+              <p class="text-[11px] text-slate-400">Setara Pohon Ditanam</p>
+              <p id="envTrees" class="text-base font-extrabold text-amber-400">0 pohon</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Tabel Proyeksi Arus Kas Tahunan (Tahun 1 - 25) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Tabel Proyeksi Arus Kas Tahunan (Tahun 1 – 25)</h3>
+              <p class="text-xs text-slate-500">Memperhitungkan eskalasi tarif PLN dan degradasi efisiensi panel surya per tahun</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <span id="tableModeBadge" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700">
+                Mode: Cicilan
+              </span>
+              <button
+                id="btnExportExcelTable"
+                type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white shadow-sm transition cursor-pointer"
+                title="Ekspor ringkasan & tabel proyeksi 25 tahun ke Excel (.xlsx)"
+              >
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                <span>Save to Excel (.xlsx)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto max-h-[420px] overflow-y-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse min-w-[840px]">
+              <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <tr>
+                  <th class="py-3 px-4">Tahun</th>
+                  <th class="py-3 px-4 text-right">Produksi Terpakai (kWh)</th>
+                  <th class="py-3 px-4 text-right">Tarif PLN (Rp/kWh)</th>
+                  <th class="py-3 px-4 text-right">Penghematan / Thn</th>
+                  <th class="py-3 px-4 text-right">Biaya / Cicilan</th>
+                  <th class="py-3 px-4 text-right">Arus Kas Bersih</th>
+                  <th class="py-3 px-4 text-right">Arus Kas Kumulatif</th>
+                  <th class="py-3 px-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="projectionTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+                <!-- Diisi secara dinamis oleh JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-8 border-t border-slate-200 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <p>Simulasi bersifat estimasi finansial & teknis berdasarkan parameter yang dimasukkan.</p>
+      <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+        <p>Umur teknis panel surya dihitung standar garansi performa 25 tahun.</p>
+        <span class="hidden sm:inline text-slate-300">•</span>
+        <p class="font-semibold text-slate-700">by epsilon</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div
+    id="toastNotification"
+    role="status"
+    aria-live="polite"
+    class="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-semibold transition-all duration-300 translate-y-4 opacity-0 pointer-events-none bg-slate-900 text-white border-emerald-500/40"
+  >
+    <div id="toastIconWrap" class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+      <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+    </div>
+    <div>
+      <p id="toastTitle" class="text-xs font-bold text-white">Berhasil Diunduh</p>
+      <p id="toastMessage" class="text-[11px] font-normal text-slate-300">File Excel (.xlsx) telah disimpan.</p>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // -------------------- STATE DEFAULT --------------------
+      const DEFAULT_STATE = {
+        tariffGroup: '1699.53',
+        tariff: 1699.53,
+        monthlyBill: 3000000,
+        systemType: 'ongrid', // 'ongrid' | 'hybrid'
+        capacityKwp: 10.0,
+        pricePerKwp: 14000000,
+        financingMode: 'loan', // 'cash' | 'loan'
+        dpPercent: 10,
+        tenorYears: 5,
+        interestRate: 7.0,
+        psh: 3.8,
+        selfConsumption: 80,
+        tariffEscalation: 3.0,
+        degradation: 0.5,
+      };
+
+      let state = { ...DEFAULT_STATE };
+      let lastSimulationResult = null;
+      let toastTimeout = null;
+
+      // Chart instances
+      let cashflowChartInstance = null;
+      let monthlyCompareChartInstance = null;
+
+      // -------------------- DOM ELEMENTS --------------------
+      const el = {
+        btnReset: document.getElementById('btnReset'),
+        btnExportExcelHeader: document.getElementById('btnExportExcelHeader'),
+        btnExportExcelTable: document.getElementById('btnExportExcelTable'),
+        toastNotification: document.getElementById('toastNotification'),
+        toastIconWrap: document.getElementById('toastIconWrap'),
+        toastTitle: document.getElementById('toastTitle'),
+        toastMessage: document.getElementById('toastMessage'),
+
+        // 1. Profil Listrik PLN
+        tariffGroup: document.getElementById('tariffGroup'),
+        customTariffWrap: document.getElementById('customTariffWrap'),
+        customTariffInput: document.getElementById('customTariffInput'),
+        estKwhBadge: document.getElementById('estKwhBadge'),
+        monthlyBillInput: document.getElementById('monthlyBillInput'),
+        monthlyBillRange: document.getElementById('monthlyBillRange'),
+
+        // 2. Konfigurasi PLTS
+        btnTypeOnGrid: document.getElementById('btnTypeOnGrid'),
+        btnTypeHybrid: document.getElementById('btnTypeHybrid'),
+        btnAutoOptimal: document.getElementById('btnAutoOptimal'),
+        capacityDisplay: document.getElementById('capacityDisplay'),
+        estMonthlyProdBadge: document.getElementById('estMonthlyProdBadge'),
+        capacityRange: document.getElementById('capacityRange'),
+        overCapacityNotice: document.getElementById('overCapacityNotice'),
+        pricePerKwpInput: document.getElementById('pricePerKwpInput'),
+
+        // 3. Skema Pembiayaan
+        btnModeCash: document.getElementById('btnModeCash'),
+        btnModeLoan: document.getElementById('btnModeLoan'),
+        loanOptionsWrap: document.getElementById('loanOptionsWrap'),
+        cashInfoWrap: document.getElementById('cashInfoWrap'),
+        dpPercentLabel: document.getElementById('dpPercentLabel'),
+        dpAmountLabel: document.getElementById('dpAmountLabel'),
+        dpRange: document.getElementById('dpRange'),
+        tenorLabel: document.getElementById('tenorLabel'),
+        tenorRange: document.getElementById('tenorRange'),
+        interestLabel: document.getElementById('interestLabel'),
+        interestRange: document.getElementById('interestRange'),
+        loanPrincipalLabel: document.getElementById('loanPrincipalLabel'),
+        monthlyInstallmentLabel: document.getElementById('monthlyInstallmentLabel'),
+
+        // 4. Parameter Teknis
+        btnToggleTech: document.getElementById('btnToggleTech'),
+        techChevron: document.getElementById('techChevron'),
+        techAccordionBody: document.getElementById('techAccordionBody'),
+        pshLabel: document.getElementById('pshLabel'),
+        pshRange: document.getElementById('pshRange'),
+        selfConsLabel: document.getElementById('selfConsLabel'),
+        selfConsRange: document.getElementById('selfConsRange'),
+        escalationLabel: document.getElementById('escalationLabel'),
+        escalationRange: document.getElementById('escalationRange'),
+        degradationLabel: document.getElementById('degradationLabel'),
+        degradationRange: document.getElementById('degradationRange'),
+
+        // Output: Banner
+        coverageBanner: document.getElementById('coverageBanner'),
+        bannerIcon: document.getElementById('bannerIcon'),
+        bannerBadgeText: document.getElementById('bannerBadgeText'),
+        bannerTitle: document.getElementById('bannerTitle'),
+        bannerSubtitle: document.getElementById('bannerSubtitle'),
+        bannerMetricLabel: document.getElementById('bannerMetricLabel'),
+        bannerMetricValue: document.getElementById('bannerMetricValue'),
+        bannerMetricSub: document.getElementById('bannerMetricSub'),
+
+        // Output: KPIs
+        kpiInvestment: document.getElementById('kpiInvestment'),
+        kpiRoofArea: document.getElementById('kpiRoofArea'),
+        kpiMonthlySavings: document.getElementById('kpiMonthlySavings'),
+        kpiSavingsPercent: document.getElementById('kpiSavingsPercent'),
+        kpiBep: document.getElementById('kpiBep'),
+        kpiBepSub: document.getElementById('kpiBepSub'),
+        kpiNetProfit: document.getElementById('kpiNetProfit'),
+        kpiRoi: document.getElementById('kpiRoi'),
+
+        // Output: Charts, Env & Table
+        cashflowChart: document.getElementById('cashflowChart'),
+        monthlyCompareChart: document.getElementById('monthlyCompareChart'),
+        envCo2: document.getElementById('envCo2'),
+        envTrees: document.getElementById('envTrees'),
+        tableModeBadge: document.getElementById('tableModeBadge'),
+        projectionTableBody: document.getElementById('projectionTableBody'),
+      };
+
+      // -------------------- FORMATTERS --------------------
+      function formatRupiah(value, showSign = false) {
+        const rounded = Math.round(value || 0);
+        const absFormatted = new Intl.NumberFormat('id-ID').format(Math.abs(rounded));
+        if (rounded < 0) return `-Rp ${absFormatted}`;
+        if (showSign && rounded > 0) return `+Rp ${absFormatted}`;
+        return `Rp ${absFormatted}`;
+      }
+
+      function formatShortRupiah(value) {
+        const abs = Math.abs(value);
+        const sign = value < 0 ? '-' : '';
+        if (abs >= 1e9) return `${sign}Rp ${(abs / 1e9).toFixed(1)} M`;
+        if (abs >= 1e6) return `${sign}Rp ${(abs / 1e6).toFixed(0)} jt`;
+        if (abs >= 1e3) return `${sign}Rp ${(abs / 1e3).toFixed(0)} rb`;
+        return `${sign}Rp ${Math.round(abs)}`;
+      }
+
+      function formatNumber(value, decimals = 0) {
+        return new Intl.NumberFormat('id-ID', {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        }).format(value || 0);
+      }
+
+      function formatBepText(bepYears) {
+        if (bepYears === null || bepYears === undefined || !isFinite(bepYears)) {
+          return '> 25 Tahun';
+        }
+        if (bepYears <= 0) {
+          return 'Langsung Surplus';
+        }
+        const totalMonths = Math.max(1, Math.round(bepYears * 12));
+        const years = Math.floor(totalMonths / 12);
+        const months = totalMonths % 12;
+        if (years === 0) return `${months} Bln`;
+        if (months === 0) return `${years} Thn`;
+        return `${years} Thn ${months} Bln`;
+      }
+
+      // -------------------- CORE CALCULATION ENGINE --------------------
+      function calculateMonthlyInstallment(principal, annualRatePercent, years) {
+        const n = years * 12;
+        if (principal <= 0 || n <= 0) return 0;
+        const r = (annualRatePercent / 100) / 12;
+        if (r === 0) return principal / n;
+        return (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      }
+
+      function calculateSimulation() {
+        const tariff = Math.max(100, Number(state.tariff) || 1699.53);
+        const monthlyBill = Math.max(100000, Number(state.monthlyBill) || 3000000);
+        const capacityKwp = Math.max(0.5, Number(state.capacityKwp) || 1);
+        const pricePerKwp = Math.max(1000000, Number(state.pricePerKwp) || 14000000);
+
+        const monthlyKwhUsage = monthlyBill / tariff;
+        const annualKwhUsage = monthlyKwhUsage * 12;
+
+        // Investasi & Luas Atap (~5.5 m2 per kWp untuk panel modern 550Wp)
+        const totalInvestment = capacityKwp * pricePerKwp;
+        const roofArea = capacityKwp * 5.5;
+
+        // Skema Pembiayaan
+        const dpAmount = state.financingMode === 'loan'
+          ? totalInvestment * (state.dpPercent / 100)
+          : totalInvestment;
+        const loanPrincipal = state.financingMode === 'loan'
+          ? Math.max(0, totalInvestment - dpAmount)
+          : 0;
+        const monthlyInstallment = state.financingMode === 'loan'
+          ? calculateMonthlyInstallment(loanPrincipal, state.interestRate, state.tenorYears)
+          : 0;
+        const annualInstallment = monthlyInstallment * 12;
+
+        // Tahun 1 Produksi & Penghematan
+        const grossAnnualProdY1 = capacityKwp * state.psh * 365;
+        const selfConsProdY1 = grossAnnualProdY1 * (state.selfConsumption / 100);
+        const isOverCapacity = selfConsProdY1 > annualKwhUsage;
+        const usableAnnualProdY1 = Math.min(selfConsProdY1, annualKwhUsage);
+        const monthlyUsableProdY1 = usableAnnualProdY1 / 12;
+
+        const monthlySavingsY1 = monthlyUsableProdY1 * tariff;
+        const remainingMonthlyBillY1 = Math.max(0, monthlyBill - monthlySavingsY1);
+        const savingsPercentY1 = monthlyBill > 0 ? (monthlySavingsY1 / monthlyBill) * 100 : 0;
+
+        // Proyeksi 25 Tahun
+        const yearlyRows = [];
+        const cumulativeSeries = [];
+        let cumulativeCashflow = -dpAmount;
+        cumulativeSeries.push(cumulativeCashflow); // Tahun 0
+
+        let bepYears = cumulativeCashflow >= 0 ? 0 : null;
+        const totalCashOut = state.financingMode === 'cash'
+          ? totalInvestment
+          : dpAmount + annualInstallment * state.tenorYears;
+
+        let totalUsableProd25 = 0;
+
+        for (let year = 1; year <= 25; year++) {
+          const degFactor = Math.pow(1 - state.degradation / 100, year - 1);
+          const tariffY = tariff * Math.pow(1 + state.tariffEscalation / 100, year - 1);
+
+          const grossProdY = capacityKwp * state.psh * 365 * degFactor;
+          const usableProdY = Math.min(grossProdY * (state.selfConsumption / 100), annualKwhUsage);
+          totalUsableProd25 += usableProdY;
+          const annualSavingsY = usableProdY * tariffY;
+
+          let annualCostY = 0;
+          if (state.financingMode === 'loan' && year <= state.tenorYears) {
+            annualCostY = annualInstallment;
+          }
+
+          const prevCum = cumulativeCashflow;
+          const netCashflowY = annualSavingsY - annualCostY;
+          cumulativeCashflow += netCashflowY;
+          cumulativeSeries.push(cumulativeCashflow);
+
+          // Deteksi perpotongan BEP (dari negatif ke >= 0)
+          if (prevCum < 0 && cumulativeCashflow >= 0) {
+            const fraction = (-prevCum) / (cumulativeCashflow - prevCum);
+            bepYears = (year - 1) + fraction;
+          } else if (cumulativeCashflow < 0) {
+            bepYears = null;
+          }
+
+          yearlyRows.push({
+            year,
+            usableProdY,
+            tariffY,
+            annualSavingsY,
+            annualCostY,
+            netCashflowY,
+            cumulativeCashflow,
+            isCovered: cumulativeCashflow >= 0,
+          });
+        }
+
+        const netProfit25 = cumulativeCashflow;
+        const roiPercent = totalCashOut > 0 ? (netProfit25 / totalCashOut) * 100 : 0;
+
+        // Dampak Lingkungan (Total 25 tahun energi bersih terpakai)
+        const co2Ton25Years = (totalUsableProd25 * 0.85) / 1000;
+        const equivalentTrees25Years = Math.round((totalUsableProd25 * 0.85) / 21);
+
+        return {
+          tariff,
+          monthlyBill,
+          monthlyKwhUsage,
+          totalInvestment,
+          roofArea,
+          dpAmount,
+          loanPrincipal,
+          monthlyInstallment,
+          monthlyUsableProdY1,
+          isOverCapacity,
+          monthlySavingsY1,
+          remainingMonthlyBillY1,
+          savingsPercentY1,
+          bepYears,
+          netProfit25,
+          roiPercent,
+          co2Ton25Years,
+          equivalentTrees25Years,
+          yearlyRows,
+          cumulativeSeries,
+        };
+      }
+
+      // -------------------- UI RENDERING --------------------
+      function renderBanner(res) {
+        if (state.financingMode === 'cash') {
+          el.coverageBanner.className =
+            'rounded-2xl p-5 sm:p-6 shadow-md border transition-colors duration-300 bg-gradient-to-br from-slate-800 to-slate-900 text-white border-slate-700';
+          el.bannerBadgeText.textContent = 'SKEMA TUNAI (CASH) — ROI MAKSIMAL';
+          el.bannerTitle.textContent = `Investasi Tertutup Penuh dalam ${formatBepText(res.bepYears)}`;
+          el.bannerSubtitle.textContent = `Tanpa beban bunga cicilan, penghematan PLN sebesar ${formatRupiah(res.monthlySavingsY1)}/bulan akan mengembalikan modal Anda dan menghasilkan listrik hampir gratis hingga tahun ke-25.`;
+          el.bannerMetricLabel.textContent = 'Hemat PLN Tahun 1';
+          el.bannerMetricValue.textContent = `${formatRupiah(res.monthlySavingsY1)}/bln`;
+          el.bannerMetricSub.textContent = `Tagihan PLN turun ${res.savingsPercentY1.toFixed(1)}%`;
+          return;
+        }
+
+        // Skema Cicilan
+        const diff = res.monthlySavingsY1 - res.monthlyInstallment;
+        const coverRatio = res.monthlyInstallment > 0
+          ? (res.monthlySavingsY1 / res.monthlyInstallment) * 100
+          : 100;
+
+        if (diff >= 0) {
+          el.coverageBanner.className =
+            'rounded-2xl p-5 sm:p-6 shadow-md border transition-colors duration-300 bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-emerald-500/40';
+          el.bannerBadgeText.textContent = 'BIAYA TERCOVER 100% — CASHFLOW POSITIF';
+          el.bannerTitle.textContent = 'Penghematan PLN Menutupi Seluruh Cicilan Bulanan!';
+          el.bannerSubtitle.textContent = `Penghematan tagihan listrik (${formatRupiah(res.monthlySavingsY1)}/bln) lebih besar dari cicilan (${formatRupiah(res.monthlyInstallment)}/bln). Anda langsung surplus sejak bulan pertama!`;
+          el.bannerMetricLabel.textContent = 'Surplus Bersih / Bulan';
+          el.bannerMetricValue.textContent = formatRupiah(diff, true);
+          el.bannerMetricSub.textContent = `Rasio Cover Cicilan: ${coverRatio.toFixed(0)}%`;
+        } else {
+          el.coverageBanner.className =
+            'rounded-2xl p-5 sm:p-6 shadow-md border transition-colors duration-300 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-amber-400/50';
+          el.bannerBadgeText.textContent = `TERCOVER ${coverRatio.toFixed(0)}% — PERLU TAMBAHAN BULANAN`;
+          el.bannerTitle.textContent = `Penghematan PLN Menutupi ${coverRatio.toFixed(0)}% Cicilan Bulanan`;
+          el.bannerSubtitle.textContent = `Selama tenor ${state.tenorYears} tahun, Anda cukup menambah ${formatRupiah(Math.abs(diff))}/bulan di luar penghematan PLN. Coba perpanjang tenor atau naikkan DP agar 100% self-funding.`;
+          el.bannerMetricLabel.textContent = 'Selisih / Bulan (Selama Tenor)';
+          el.bannerMetricValue.textContent = formatRupiah(diff, true);
+          el.bannerMetricSub.textContent = `Cicilan: ${formatRupiah(res.monthlyInstallment)}/bln`;
+        }
+      }
+
+      function renderTable(rows) {
+        const html = rows.map((row) => {
+          const netClass = row.netCashflowY >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
+          const cumClass = row.cumulativeCashflow >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-semibold';
+          const statusBadge = row.isCovered
+            ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Sudah Tercover (Profit)</span>`
+            : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Proses Balik Modal</span>`;
+
+          return `
+            <tr class="hover:bg-slate-50/80 transition-colors">
+              <td class="py-2.5 px-4 font-bold text-slate-800">Thn ${row.year}</td>
+              <td class="py-2.5 px-4 text-right text-slate-700">${formatNumber(row.usableProdY)}</td>
+              <td class="py-2.5 px-4 text-right text-slate-600">${formatRupiah(row.tariffY)}</td>
+              <td class="py-2.5 px-4 text-right font-semibold text-emerald-600">+${formatRupiah(row.annualSavingsY)}</td>
+              <td class="py-2.5 px-4 text-right text-slate-600">${row.annualCostY > 0 ? formatRupiah(row.annualCostY) : '-'}</td>
+              <td class="py-2.5 px-4 text-right ${netClass}">${formatRupiah(row.netCashflowY, true)}</td>
+              <td class="py-2.5 px-4 text-right ${cumClass}">${formatRupiah(row.cumulativeCashflow, true)}</td>
+              <td class="py-2.5 px-4 text-center">${statusBadge}</td>
+            </tr>
+          `;
+        }).join('');
+
+        el.projectionTableBody.innerHTML = html;
+      }
+
+      function renderAll() {
+        try {
+          const res = calculateSimulation();
+          lastSimulationResult = res;
+
+          // 1. Update Left Panel Dynamic Labels
+          el.estKwhBadge.textContent = `~${formatNumber(res.monthlyKwhUsage)} kWh/bln`;
+          el.capacityDisplay.innerHTML = `${state.capacityKwp.toFixed(1)} <span class="text-sm font-semibold text-slate-500">kWp</span>`;
+          el.estMonthlyProdBadge.textContent = `~${formatNumber(res.monthlyUsableProdY1)} kWh terpakai/bln`;
+          el.overCapacityNotice.classList.toggle('hidden', !res.isOverCapacity);
+
+          el.dpPercentLabel.textContent = `${state.dpPercent}%`;
+          el.dpAmountLabel.textContent = `(${formatRupiah(res.dpAmount)})`;
+          el.tenorLabel.textContent = `${state.tenorYears} Tahun (${state.tenorYears * 12} bln)`;
+          el.interestLabel.textContent = `${state.interestRate.toFixed(1)}% / thn`;
+          el.loanPrincipalLabel.textContent = formatRupiah(res.loanPrincipal);
+          el.monthlyInstallmentLabel.textContent = `${formatRupiah(res.monthlyInstallment)} / bln`;
+
+          el.pshLabel.textContent = `${state.psh.toFixed(1)} jam/hari`;
+          el.selfConsLabel.textContent = `${state.selfConsumption}%`;
+          el.escalationLabel.textContent = `${state.tariffEscalation.toFixed(1)}% / thn`;
+          el.degradationLabel.textContent = `${state.degradation.toFixed(1)}% / thn`;
+
+          // 2. Banner Self-Funding
+          renderBanner(res);
+
+          // 3. KPI Cards
+          el.kpiInvestment.textContent = formatRupiah(res.totalInvestment);
+          el.kpiRoofArea.innerHTML = `<i data-lucide="home" class="w-3.5 h-3.5 text-amber-500"></i> Est. luas atap: <strong>${formatNumber(res.roofArea, 1)} m²</strong>`;
+
+          el.kpiMonthlySavings.textContent = formatRupiah(res.monthlySavingsY1);
+          el.kpiSavingsPercent.textContent = `Turun ${res.savingsPercentY1.toFixed(1)}% dari tagihan`;
+
+          el.kpiBep.textContent = formatBepText(res.bepYears);
+          el.kpiBepSub.textContent = state.financingMode === 'cash'
+            ? 'Modal tunai kembali penuh'
+            : `Tenor cicilan ${state.tenorYears} tahun`;
+
+          el.kpiNetProfit.textContent = formatRupiah(res.netProfit25);
+          el.kpiRoi.textContent = `ROI: ${formatNumber(res.roiPercent, 0)}%`;
+
+          // 4. Environmental Impact (Total 25 Tahun)
+          el.envCo2.textContent = `${formatNumber(res.co2Ton25Years, 1)} ton`;
+          el.envTrees.textContent = `${formatNumber(res.equivalentTrees25Years)} pohon`;
+
+          // 5. Table & Badge
+          el.tableModeBadge.textContent = state.financingMode === 'cash'
+            ? 'Mode: Beli Tunai (Cash)'
+            : `Mode: Cicilan (${state.tenorYears} Thn)`;
+          renderTable(res.yearlyRows);
+
+          // 6. Charts
+          updateCharts(res);
+
+          // Refresh Lucide icons
+          if (window.lucide) lucide.createIcons();
+        } catch (err) {
+          console.error('Error rendering simulation:', err);
+        }
+      }
+
+      // -------------------- CHARTS (Chart.js) --------------------
+      function initCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        // 1. Arus Kas Kumulatif 25 Tahun
+        const ctxCashflow = el.cashflowChart.getContext('2d');
+        cashflowChartInstance = new Chart(ctxCashflow, {
+          type: 'line',
+          data: {
+            labels: Array.from({ length: 26 }, (_, i) => `Thn ${i}`),
+            datasets: [
+              {
+                label: 'Arus Kas Kumulatif',
+                data: [],
+                borderWidth: 2.5,
+                tension: 0.3,
+                fill: {
+                  target: { value: 0 },
+                  above: 'rgba(16, 185, 129, 0.16)',
+                  below: 'rgba(244, 63, 94, 0.14)',
+                },
+                segment: {
+                  borderColor: (ctx) =>
+                    ctx.p1.parsed.y >= 0 ? '#10b981' : '#f43f5e',
+                },
+                pointRadius: 2.5,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#0f172a',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `Kumulatif: ${formatRupiah(ctx.parsed.y, true)}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxTicksLimit: 8, font: { size: 11 } },
+              },
+              y: {
+                grid: {
+                  color: (ctx) => (ctx.tick.value === 0 ? '#64748b' : '#f1f5f9'),
+                  lineWidth: (ctx) => (ctx.tick.value === 0 ? 1.5 : 1),
+                },
+                ticks: {
+                  font: { size: 11 },
+                  callback: (val) => formatShortRupiah(val),
+                },
+              },
+            },
+          },
+        });
+
+        // 2. Perbandingan Biaya Bulanan (Tahun 1)
+        const ctxCompare = el.monthlyCompareChart.getContext('2d');
+        monthlyCompareChartInstance = new Chart(ctxCompare, {
+          type: 'bar',
+          data: {
+            labels: ['Sebelum PLTS', 'Sesudah PLTS'],
+            datasets: [
+              {
+                label: 'Tagihan PLN',
+                data: [0, 0],
+                backgroundColor: '#334155',
+                borderRadius: 6,
+              },
+              {
+                label: 'Cicilan PLTS',
+                data: [0, 0],
+                backgroundColor: '#f59e0b',
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { boxWidth: 12, font: { size: 11 } },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.dataset.label}: ${formatRupiah(ctx.parsed.y)}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                stacked: true,
+                grid: { display: false },
+                ticks: { font: { size: 12, weight: '600' } },
+              },
+              y: {
+                stacked: true,
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                  font: { size: 11 },
+                  callback: (val) => formatShortRupiah(val),
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function updateCharts(res) {
+        if (cashflowChartInstance) {
+          cashflowChartInstance.data.datasets[0].data = res.cumulativeSeries;
+          cashflowChartInstance.update();
+        }
+        if (monthlyCompareChartInstance) {
+          const installmentY1 = state.financingMode === 'loan' ? res.monthlyInstallment : 0;
+          monthlyCompareChartInstance.data.datasets[0].data = [
+            Math.round(res.monthlyBill),
+            Math.round(res.remainingMonthlyBillY1),
+          ];
+          monthlyCompareChartInstance.data.datasets[1].data = [
+            0,
+            Math.round(installmentY1),
+          ];
+          monthlyCompareChartInstance.update();
+        }
+      }
+
+      // -------------------- UI TOGGLE HELPERS --------------------
+      function setSystemTypeUI(type) {
+        state.systemType = type;
+        if (type === 'ongrid') {
+          el.btnTypeOnGrid.className =
+            'system-type-btn flex flex-col items-start p-3 rounded-xl border-2 border-amber-500 bg-amber-50/70 text-left transition cursor-pointer';
+          el.btnTypeHybrid.className =
+            'system-type-btn flex flex-col items-start p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-left transition cursor-pointer';
+        } else {
+          el.btnTypeHybrid.className =
+            'system-type-btn flex flex-col items-start p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/70 text-left transition cursor-pointer';
+          el.btnTypeOnGrid.className =
+            'system-type-btn flex flex-col items-start p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-left transition cursor-pointer';
+        }
+      }
+
+      function setFinancingModeUI(mode) {
+        state.financingMode = mode;
+        if (mode === 'cash') {
+          el.btnModeCash.className =
+            'py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer bg-slate-900 text-white shadow-sm';
+          el.btnModeLoan.className =
+            'py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600';
+          el.loanOptionsWrap.classList.add('hidden');
+          el.cashInfoWrap.classList.remove('hidden');
+        } else {
+          el.btnModeLoan.className =
+            'py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer bg-slate-900 text-white shadow-sm';
+          el.btnModeCash.className =
+            'py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600';
+          el.loanOptionsWrap.classList.remove('hidden');
+          el.cashInfoWrap.classList.add('hidden');
+        }
+      }
+
+      function syncInputsFromState() {
+        el.tariffGroup.value = state.tariffGroup;
+        el.customTariffWrap.classList.toggle('hidden', state.tariffGroup !== 'custom');
+        el.customTariffInput.value = state.tariff;
+
+        el.monthlyBillInput.value = state.monthlyBill;
+        el.monthlyBillRange.value = Math.min(50000000, Math.max(500000, state.monthlyBill));
+
+        el.capacityRange.value = state.capacityKwp;
+        el.pricePerKwpInput.value = state.pricePerKwp;
+
+        el.dpRange.value = state.dpPercent;
+        el.tenorRange.value = state.tenorYears;
+        el.interestRange.value = state.interestRate;
+
+        el.pshRange.value = state.psh;
+        el.selfConsRange.value = state.selfConsumption;
+        el.escalationRange.value = state.tariffEscalation;
+        el.degradationRange.value = state.degradation;
+      }
+
+      function autoCalculateOptimalCapacity() {
+        const monthlyKwh = state.monthlyBill / state.tariff;
+        const annualKwh = monthlyKwh * 12;
+        const usablePerKwpYear = state.psh * 365 * (state.selfConsumption / 100);
+        if (usablePerKwpYear <= 0) return;
+
+        // Target ~85%–100% konsumsi PLN agar tidak mubazir
+        let optimalKwp = annualKwh / usablePerKwpYear;
+        optimalKwp = Math.round(optimalKwp * 2) / 2; // Kelipatan 0.5 kWp
+        optimalKwp = Math.min(50, Math.max(1, optimalKwp));
+
+        state.capacityKwp = optimalKwp;
+        el.capacityRange.value = optimalKwp;
+        renderAll();
+        showToast('Kapasitas Optimal Diterapkan', `Kapasitas disesuaikan ke ${optimalKwp.toFixed(1)} kWp sesuai tagihan PLN Anda.`);
+      }
+
+      // -------------------- TOAST NOTIFICATION --------------------
+      function showToast(title, message, isError = false) {
+        if (toastTimeout) clearTimeout(toastTimeout);
+
+        el.toastTitle.textContent = title;
+        el.toastMessage.textContent = message;
+
+        if (isError) {
+          el.toastNotification.className =
+            'fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-semibold transition-all duration-300 translate-y-0 opacity-100 bg-slate-900 text-white border-rose-500/50';
+          el.toastIconWrap.className =
+            'w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0';
+          el.toastIconWrap.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i>';
+        } else {
+          el.toastNotification.className =
+            'fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-semibold transition-all duration-300 translate-y-0 opacity-100 bg-slate-900 text-white border-emerald-500/40';
+          el.toastIconWrap.className =
+            'w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0';
+          el.toastIconWrap.innerHTML = '<i data-lucide="file-spreadsheet" class="w-4 h-4"></i>';
+        }
+
+        if (window.lucide) lucide.createIcons();
+
+        toastTimeout = setTimeout(() => {
+          el.toastNotification.classList.remove('translate-y-0', 'opacity-100');
+          el.toastNotification.classList.add('translate-y-4', 'opacity-0', 'pointer-events-none');
+        }, 3800);
+      }
+
+      // -------------------- EXPORT TO EXCEL (.xlsx) --------------------
+      function autoFitColumns(rows) {
+        const colWidths = [];
+        rows.forEach((row) => {
+          row.forEach((cell, idx) => {
+            const str = cell === null || cell === undefined ? '' : String(cell);
+            const len = Math.min(55, Math.max(12, str.length + 4));
+            if (!colWidths[idx] || len > colWidths[idx]) {
+              colWidths[idx] = len;
+            }
+          });
+        });
+        return colWidths.map((wch) => ({ wch }));
+      }
+
+      function exportToExcel() {
+        try {
+          if (typeof XLSX === 'undefined') {
+            showToast('Gagal Memuat SheetJS', 'Pastikan koneksi internet aktif untuk mengunduh file Excel.', true);
+            return;
+          }
+
+          const res = lastSimulationResult || calculateSimulation();
+          const now = new Date();
+          const yyyy = now.getFullYear();
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const dd = String(now.getDate()).padStart(2, '0');
+          const dateStr = `${yyyy}-${mm}-${dd}`;
+          const fileName = `Simulasi_PLTS_Atap_${dateStr}.xlsx`;
+
+          const selectedTariffText = el.tariffGroup.options[el.tariffGroup.selectedIndex].text;
+          const systemTypeText = state.systemType === 'ongrid' ? 'On-Grid (Tanpa Baterai)' : 'Hybrid (Dengan Baterai)';
+          const financingText = state.financingMode === 'cash' ? 'Beli Tunai (Cash)' : `Skema Cicilan (${state.tenorYears} Tahun)`;
+
+          let statusSelfFunding = '';
+          if (state.financingMode === 'cash') {
+            statusSelfFunding = `Tunai — Balik Modal (BEP) dalam ${formatBepText(res.bepYears)} (Hemat ${res.savingsPercentY1.toFixed(1)}%/bln)`;
+          } else {
+            const diff = res.monthlySavingsY1 - res.monthlyInstallment;
+            const ratio = res.monthlyInstallment > 0 ? (res.monthlySavingsY1 / res.monthlyInstallment) * 100 : 100;
+            statusSelfFunding = diff >= 0
+              ? `Tercover 100% / Cashflow Positif (Surplus ${formatRupiah(diff, true)}/bln, Rasio ${ratio.toFixed(0)}%)`
+              : `Tercover ${ratio.toFixed(0)}% (Selisih ${formatRupiah(diff)}/bln selama tenor ${state.tenorYears} thn)`;
+          }
+
+          // ===== SHEET 1: Ringkasan Simulasi =====
+          const summaryData = [
+            ['LAPORAN SIMULASI PLTS ATAP (SOLAR PANEL) — SELF-FUNDING & PENGHEMATAN PLN', '', ''],
+            ['Tanggal Simulasi', dateStr, ''],
+            ['', '', ''],
+            ['A. PARAMETER INPUT AKTIF', 'Nilai', 'Keterangan'],
+            ['Golongan Tarif PLN', selectedTariffText, ''],
+            ['Tarif Listrik PLN (Rp/kWh)', Number(res.tariff.toFixed(2)), 'Rp/kWh'],
+            ['Tagihan Listrik PLN Bulanan', Math.round(res.monthlyBill), `Est. ~${formatNumber(res.monthlyKwhUsage)} kWh/bln`],
+            ['Tipe Sistem PLTS', systemTypeText, ''],
+            ['Kapasitas PLTS', state.capacityKwp, 'kWp'],
+            ['Harga Investasi per kWp', Math.round(state.pricePerKwp), 'Rp/kWp (terpasang)'],
+            ['Skema Pembayaran', financingText, ''],
+            ...(state.financingMode === 'loan'
+              ? [
+                  ['Uang Muka (DP)', `${state.dpPercent}%`, formatRupiah(res.dpAmount)],
+                  ['Tenor Cicilan', `${state.tenorYears} Tahun`, `${state.tenorYears * 12} bulan`],
+                  ['Bunga Efektif per Tahun', `${state.interestRate.toFixed(1)}%`, 'per tahun'],
+                  ['Estimasi Cicilan Bulanan', Math.round(res.monthlyInstallment), 'Rp/bulan'],
+                ]
+              : []),
+            ['Peak Sun Hours (PSH)', state.psh, 'jam/hari'],
+            ['Rasio Self-Consumption', `${state.selfConsumption}%`, 'Pemakaian langsung siang hari'],
+            ['Estimasi Kenaikan Tarif PLN', `${state.tariffEscalation.toFixed(1)}%`, 'per tahun'],
+            ['Degradasi Panel Surya', `${state.degradation.toFixed(1)}%`, 'per tahun'],
+            ['', '', ''],
+            ['B. HASIL PERHITUNGAN UTAMA', 'Nilai', 'Keterangan'],
+            ['Total Estimasi Investasi', Math.round(res.totalInvestment), `Est. luas atap ${formatNumber(res.roofArea, 1)} m²`],
+            ['Penghematan Listrik Bulan Pertama', Math.round(res.monthlySavingsY1), `Turun ${res.savingsPercentY1.toFixed(1)}% dari tagihan PLN`],
+            ['Sisa Tagihan PLN Bulan Pertama', Math.round(res.remainingMonthlyBillY1), 'Rp/bulan'],
+            ['Status Self-Funding / Cashflow', statusSelfFunding, ''],
+            ['Payback Period / Titik Impas (BEP)', formatBepText(res.bepYears), ''],
+            ['Total Keuntungan Bersih (25 Tahun)', Math.round(res.netProfit25), `ROI 25 Tahun: ${formatNumber(res.roiPercent, 0)}%`],
+            ['', '', ''],
+            ['C. DAMPAK LINGKUNGAN (TOTAL 25 TAHUN)', 'Nilai', 'Keterangan'],
+            ['Total Reduksi Emisi CO2 (25 Tahun)', Number(res.co2Ton25Years.toFixed(2)), 'ton CO2 (faktor emisi 0,85 kg/kWh)'],
+            ['Setara Jumlah Pohon Ditanam', res.equivalentTrees25Years, 'pohon dewasa'],
+          ];
+
+          // ===== SHEET 2: Proyeksi 25 Tahun =====
+          const projectionHeader = [
+            'Tahun',
+            'Produksi Listrik (kWh)',
+            'Tarif PLN (Rp/kWh)',
+            'Penghematan Listrik (Rp)',
+            'Pembayaran / Cicilan (Rp)',
+            'Arus Kas Bersih (Rp)',
+            'Arus Kas Kumulatif (Rp)',
+            'Keterangan Status BEP',
+          ];
+
+          const projectionRows = res.yearlyRows.map((row) => [
+            row.year,
+            Math.round(row.usableProdY),
+            Number(row.tariffY.toFixed(2)),
+            Math.round(row.annualSavingsY),
+            Math.round(row.annualCostY),
+            Math.round(row.netCashflowY),
+            Math.round(row.cumulativeCashflow),
+            row.isCovered ? 'Sudah Tercover (Profit)' : 'Proses Balik Modal',
+          ]);
+
+          const projectionData = [projectionHeader, ...projectionRows];
+
+          // Buat Workbook & Worksheet
+          const wb = XLSX.utils.book_new();
+
+          const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+          wsSummary['!cols'] = autoFitColumns(summaryData);
+          XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan Simulasi');
+
+          const wsProjection = XLSX.utils.aoa_to_sheet(projectionData);
+          wsProjection['!cols'] = autoFitColumns(projectionData);
+          XLSX.utils.book_append_sheet(wb, wsProjection, 'Proyeksi 25 Tahun');
+
+          // Simpan & Unduh file .xlsx
+          XLSX.writeFile(wb, fileName);
+
+          showToast('File Excel Berhasil Diunduh!', `${fileName} (2 sheet) telah tersimpan.`);
+        } catch (error) {
+          console.error('Gagal mengekspor Excel:', error);
+          showToast('Ekspor Excel Gagal', 'Terjadi kesalahan saat membuat file .xlsx.', true);
+        }
+      }
+
+      // -------------------- EVENT BINDINGS --------------------
+      function bindEvents() {
+        // 1. Profil Listrik PLN
+        el.tariffGroup.addEventListener('change', (e) => {
+          const val = e.target.value;
+          state.tariffGroup = val;
+          if (val === 'custom') {
+            el.customTariffWrap.classList.remove('hidden');
+            state.tariff = Math.max(100, parseFloat(el.customTariffInput.value) || 1699.53);
+          } else {
+            el.customTariffWrap.classList.add('hidden');
+            state.tariff = parseFloat(val) || 1699.53;
+            el.customTariffInput.value = state.tariff;
+          }
+          renderAll();
+        });
+
+        el.customTariffInput.addEventListener('input', (e) => {
+          state.tariff = Math.max(100, parseFloat(e.target.value) || 1699.53);
+          renderAll();
+        });
+
+        el.monthlyBillRange.addEventListener('input', (e) => {
+          state.monthlyBill = parseFloat(e.target.value) || 3000000;
+          el.monthlyBillInput.value = state.monthlyBill;
+          renderAll();
+        });
+
+        el.monthlyBillInput.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          if (!isNaN(val) && val >= 100000) {
+            state.monthlyBill = val;
+            el.monthlyBillRange.value = Math.min(50000000, Math.max(500000, val));
+            renderAll();
+          }
+        });
+
+        // 2. Konfigurasi Sistem PLTS
+        el.btnTypeOnGrid.addEventListener('click', () => {
+          setSystemTypeUI('ongrid');
+          state.pricePerKwp = 14000000;
+          state.selfConsumption = 80;
+          el.pricePerKwpInput.value = state.pricePerKwp;
+          el.selfConsRange.value = state.selfConsumption;
+          renderAll();
+        });
+
+        el.btnTypeHybrid.addEventListener('click', () => {
+          setSystemTypeUI('hybrid');
+          state.pricePerKwp = 22000000;
+          state.selfConsumption = 95;
+          el.pricePerKwpInput.value = state.pricePerKwp;
+          el.selfConsRange.value = state.selfConsumption;
+          renderAll();
+        });
+
+        el.capacityRange.addEventListener('input', (e) => {
+          state.capacityKwp = parseFloat(e.target.value) || 1;
+          renderAll();
+        });
+
+        el.btnAutoOptimal.addEventListener('click', autoCalculateOptimalCapacity);
+
+        el.pricePerKwpInput.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          if (!isNaN(val) && val >= 1000000) {
+            state.pricePerKwp = val;
+            renderAll();
+          }
+        });
+
+        // 3. Skema Pembiayaan
+        el.btnModeCash.addEventListener('click', () => {
+          setFinancingModeUI('cash');
+          renderAll();
+        });
+
+        el.btnModeLoan.addEventListener('click', () => {
+          setFinancingModeUI('loan');
+          renderAll();
+        });
+
+        el.dpRange.addEventListener('input', (e) => {
+          state.dpPercent = parseFloat(e.target.value) || 0;
+          renderAll();
+        });
+
+        el.tenorRange.addEventListener('input', (e) => {
+          state.tenorYears = parseInt(e.target.value, 10) || 1;
+          renderAll();
+        });
+
+        el.interestRange.addEventListener('input', (e) => {
+          state.interestRate = parseFloat(e.target.value) || 0;
+          renderAll();
+        });
+
+        // 4. Parameter Teknis Accordion
+        el.btnToggleTech.addEventListener('click', () => {
+          const isHidden = el.techAccordionBody.classList.toggle('hidden');
+          el.techChevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        });
+
+        el.pshRange.addEventListener('input', (e) => {
+          state.psh = parseFloat(e.target.value) || 3.8;
+          renderAll();
+        });
+
+        el.selfConsRange.addEventListener('input', (e) => {
+          state.selfConsumption = parseInt(e.target.value, 10) || 80;
+          renderAll();
+        });
+
+        el.escalationRange.addEventListener('input', (e) => {
+          state.tariffEscalation = parseFloat(e.target.value) || 0;
+          renderAll();
+        });
+
+        el.degradationRange.addEventListener('input', (e) => {
+          state.degradation = parseFloat(e.target.value) || 0;
+          renderAll();
+        });
+
+        // Reset Button
+        el.btnReset.addEventListener('click', () => {
+          state = { ...DEFAULT_STATE };
+          syncInputsFromState();
+          setSystemTypeUI(state.systemType);
+          setFinancingModeUI(state.financingMode);
+          renderAll();
+          showToast('Pengaturan Direset', 'Semua parameter telah dikembalikan ke nilai awal.');
+        });
+
+        // Export to Excel Buttons (Header & Table)
+        el.btnExportExcelHeader.addEventListener('click', exportToExcel);
+        el.btnExportExcelTable.addEventListener('click', exportToExcel);
+      }
+
+      // -------------------- INIT --------------------
+      window.addEventListener('DOMContentLoaded', () => {
+        initCharts();
+        setSystemTypeUI(state.systemType);
+        setFinancingModeUI(state.financingMode);
+        syncInputsFromState();
+        bindEvents();
+        renderAll();
+      });
+    })();
+  </script>
+</body>
+</html>
